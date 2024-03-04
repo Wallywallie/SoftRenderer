@@ -3,6 +3,7 @@
 #include "../include/geometry.h"
 #include <iostream>
 #include <direct.h>
+#include <algorithm>
 
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
@@ -12,16 +13,35 @@ const int width = 800;
 const int height = 800;
 
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
-void line2(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
-void line3(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
+void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color);
+bool isinside(Vec2i p, Vec2i t0, Vec2i t1, Vec2i t2);
 
 int main(int argc, char** argv) {
 	TGAImage image(width, height, TGAImage::RGB);
 
 
 	model = new Model("../obj/african_head.obj");
-	
+	Vec3f light_dir(0,0,-1); // define light_dir
 
+	for (int i=0; i<model->nfaces(); i++) { 
+		std::vector<int> face = model->face(i); 
+		Vec2i screen_coords[3]; 
+		Vec3f world_coords[3]; 
+		for (int j=0; j<3; j++) { 
+			Vec3f v = model->vert(face[j]); 
+			screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.); 
+			world_coords[j]  = v; 
+		} 
+		Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
+		n.normalize(); 
+		float intensity = n*light_dir; 
+		if (intensity>0) { //back-face culling 
+			triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255)); 
+		} 
+	}
+
+	
+	/**
 	for (int i=0; i<model->nfaces(); i++) { 
     	std::vector<int> face = model->face(i); 
 		for (int j=0; j<3; j++) { 
@@ -35,6 +55,7 @@ int main(int argc, char** argv) {
 			line(x0, y0, x1, y1, image, white); 
 		} 
 	}
+	*/
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga");
@@ -101,3 +122,65 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 
 }
 
+
+
+void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
+
+	int xmin = std::min({t0.x, t1.x, t2.x});
+	int ymin = std::min({t0.y, t1.y, t2.y});
+	int xmax = std::max({t0.x, t1.x, t2.x});
+	int ymax = std::max({t0.y, t1.y, t2.y});
+
+
+
+	for (int i = xmin; i <= xmax; i++) {
+		for (int j = ymin; j <= ymax; j++) {
+			Vec2i p(i, j);
+			if (isinside(p, t0,t1, t2)) {
+				image.set(i, j, color);
+			}
+		}
+
+	}
+
+}
+
+bool isinside(Vec2i p, Vec2i t0, Vec2i t1, Vec2i t2) {
+	Vec2i t0p = p - t0;
+	Vec2i t1p = p - t1;
+	Vec2i t2p = p - t2;
+
+	Vec2i t0t1 = t1 - t0;
+	Vec2i t1t2 = t2 - t1;
+	Vec2i t2t0 = t0 - t2;
+
+	if ( (t0t1.cross_product(t0p) <= 0 && t1t2.cross_product(t1p) <= 0 && t2t0.cross_product(t2p) <= 0) || (t0t1.cross_product(t0p) >= 0 && t1t2.cross_product(t1p) >= 0 && t2t0.cross_product(t2p) >= 0)) {
+		return true;
+	}
+	return false;
+
+}
+
+/**Another way to check if a point is inside of a triangle:
+ * barycentric coordinates 重心坐标
+ * P = (1-u-v) * A + u * B + v * C
+ * [u v 1] [AB.x] = 0
+ * 			AC.x
+ * 			PA.x
+ * [u v 1] [AB.y] = 0
+ * 			AC.y
+ * 			PA.y
+ * 所以[u v 1] =	[AB.x] ^[AB.y]
+ * 				 	 AC.x	 AC.y
+ * 					 PA.x	 PA.y
+*/ 
+Vec3f barycentric(Vec2i p, Vec2i A, Vec2i B, Vec2i C) {
+	//(x, y) = alpha * A + bate * B + gamma * C
+	//alpha = area(BCP) / area(ABC)
+	//beta = area(ACP) / area(ABC)
+	int area = -(A.x - B.x) * (C.y - B.y) + (A.y - B.y) * (C.x - B.x);
+	float  alpha = (-(p.x - B.x) * (C.y - B.y) + (p.y - B.y) * (C.x - B.x)) / (float) area;
+	float beta = -(p.x - C.x) * (A.y - C.y) + (p.y - C.y) * (A.x - C.x) / (float) area;
+	float gamma = 1 - alpha - beta;
+	return Vec3f(alpha, beta, gamma);
+}

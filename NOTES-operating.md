@@ -23,8 +23,12 @@ in cmakelist.txt:
 
 # 运行gprof
 
-in dir with .exe, input cmd:  
-> gprof renderer.exe gmon.out > ana.txt
+in dir with .exe, input cmd:   
+> gprof renderer.exe gmon.out > ana.txt  
 I got this error:  
->BFD: Dwarf Error: Could not find abbrev number 3926.
+>BFD: Dwarf Error: Could not find abbrev number 3926.  
 not solved yet.  
+
+# Debugging
+
+ctrl + f5
