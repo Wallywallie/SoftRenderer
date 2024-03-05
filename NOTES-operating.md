@@ -7,7 +7,7 @@ adding option info in cmd line:
 in the dir with makefile, input cmd:
 > mingw32-make
 
-# add deguding information:
+# add debugging information:
 
 in cmakelist.txt:
 > add_definitions("-Wall -ggdb -g -pg -O0")  
@@ -23,10 +23,10 @@ in cmakelist.txt:
 
 # 运行gprof
 
-in dir with .exe, input cmd:   
-> gprof renderer.exe gmon.out > ana.txt  
+in dir with .exe, input cmd:  
+> gprof renderer.exe gmon.out > ana.txt   
 I got this error:  
->BFD: Dwarf Error: Could not find abbrev number 3926.  
+> BFD: Dwarf Error: Could not find abbrev number 3926.  
 not solved yet.  
 
 # Debugging

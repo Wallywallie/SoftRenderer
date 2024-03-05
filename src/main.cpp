@@ -12,50 +12,59 @@ Model *model = nullptr;
 const int width = 800;
 const int height = 800;
 
+
+
 void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
-void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color);
-bool isinside(Vec2i p, Vec2i t0, Vec2i t1, Vec2i t2);
+void triangle(Vec3f *pts,float *zbuffer, TGAImage &image,TGAImage &tex, Vec3f *tex_coor, float intensiy);
+bool isinside(Vec3f p, Vec3f t0, Vec3f t1, Vec3f t2) ;
+Vec3f barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C);
 
 int main(int argc, char** argv) {
 	TGAImage image(width, height, TGAImage::RGB);
 
-
+	//read model
 	model = new Model("../obj/african_head.obj");
-	Vec3f light_dir(0,0,-1); // define light_dir
+	//read texture
+	TGAImage tex;
+	if (tex.read_tga_file("../obj/african_head_diffuse.tga")){
+		std::cout << "texture has been loaded." << std::endl;
+		//由于图像翻转了，texture也要跟着翻转
+		tex.flip_vertically();
+	} else {
+		std::cerr << "Failed to read TGA image." << std::endl;
+	}
 
+
+
+	float* zbuffer = new float[width * height];
+	for (int i = 0; i < width * height; i++) {
+		zbuffer[i] = std::numeric_limits<float>::min();
+	}
+	
+	Vec3f light_dir(0,0,-1); // define light_dir
 	for (int i=0; i<model->nfaces(); i++) { 
 		std::vector<int> face = model->face(i); 
-		Vec2i screen_coords[3]; 
+		std::vector<int> vt = model->fvtex(i); //从obj的f 得到三个vt的索引
+		Vec3f screen_coords[3]; 
 		Vec3f world_coords[3]; 
+		Vec3f tex_coords[3];//存储纹理坐标
 		for (int j=0; j<3; j++) { 
 			Vec3f v = model->vert(face[j]); 
-			screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.); 
+			Vec3f tex = model->vtex(vt[j]); // 得到纹理坐标
+			screen_coords[j] = Vec3f((v.x+1.)*width/2., (v.y+1.)*height/2., v.z); 
 			world_coords[j]  = v; 
+			tex_coords[j] = tex;
+			
 		} 
 		Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
 		n.normalize(); 
 		float intensity = n*light_dir; 
 		if (intensity>0) { //back-face culling 
-			triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255)); 
+			triangle(screen_coords, zbuffer, image, tex, tex_coords, intensity);
+			
 		} 
 	}
-
 	
-	/**
-	for (int i=0; i<model->nfaces(); i++) { 
-    	std::vector<int> face = model->face(i); 
-		for (int j=0; j<3; j++) { 
-			Vec3f v0 = model->vert(face[j]); 
-			Vec3f v1 = model->vert(face[(j+1)%3]); 
-
-			int x0 = (v0.x+1.)*width/2.; 
-			int y0 = (v0.y+1.)*height/2.; 
-			int x1 = (v1.x+1.)*width/2.; 
-			int y1 = (v1.y+1.)*height/2.; 
-			line(x0, y0, x1, y1, image, white); 
-		} 
-	}
-	*/
 
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga");
@@ -122,22 +131,39 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
 
 }
 
+void triangle(Vec3f *pts,float *zbuffer, TGAImage &image,TGAImage &tex, Vec3f *tex_coor, float intensiy) {
 
 
-void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
+	int xmin = std::min({pts[0].x, pts[1].x, pts[2].x});
+	int ymin = std::min({pts[0].y, pts[1].y, pts[2].y});
+	int xmax = std::max({pts[0].x, pts[1].x, pts[2].x});
+	int ymax = std::max({pts[0].y, pts[1].y, pts[2].y});
 
-	int xmin = std::min({t0.x, t1.x, t2.x});
-	int ymin = std::min({t0.y, t1.y, t2.y});
-	int xmax = std::max({t0.x, t1.x, t2.x});
-	int ymax = std::max({t0.y, t1.y, t2.y});
+	for (int i = std::floor(xmin); i <= std::ceil(xmax); i++) {
+		for (int j = std::floor(ymin); j <= std::ceil(ymax); j++) {
+			Vec3f p(i + 0.5, j + 0.5, 0);
+			
+			if (isinside(p, pts[0], pts[1], pts[2])) {
+				Vec3f baryCoor = barycentric(p, pts[0], pts[1], pts[2]);
 
+				p.z = baryCoor.x * pts[0].z + baryCoor.y * pts[1].z +  baryCoor.z * pts[2].z;
+				if (p.z > zbuffer[i + j * width]) {
+					zbuffer[i + j * width] = p.z;
 
+					//对纹理进行插值，得到颜色
+					
+						
+					Vec3f coor = (tex_coor[0] * baryCoor.x + tex_coor[1] * baryCoor.y + tex_coor[2] * baryCoor.z);
 
-	for (int i = xmin; i <= xmax; i++) {
-		for (int j = ymin; j <= ymax; j++) {
-			Vec2i p(i, j);
-			if (isinside(p, t0,t1, t2)) {
-				image.set(i, j, color);
+					//std:: cout << tex_coor[0].x << " " << tex_coor[0].y << " " << tex_coor[0].z << std::endl; 
+ 
+					TGAColor color = tex.get(coor.x * tex.get_width(), coor.y * tex.get_height()) ; //纹理坐标得取值为[0, 1],映射到像素空间
+					color = TGAColor(color.r * intensiy, color.g*intensiy, color.b * intensiy, color.a);
+					image.set(i, j, color);
+					
+				}
+
+				
 			}
 		}
 
@@ -145,16 +171,16 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
 
 }
 
-bool isinside(Vec2i p, Vec2i t0, Vec2i t1, Vec2i t2) {
-	Vec2i t0p = p - t0;
-	Vec2i t1p = p - t1;
-	Vec2i t2p = p - t2;
+bool isinside(Vec3f p, Vec3f t0, Vec3f t1, Vec3f t2) {
+	Vec3f t0p = p - t0;
+	Vec3f t1p = p - t1;
+	Vec3f t2p = p - t2;
 
-	Vec2i t0t1 = t1 - t0;
-	Vec2i t1t2 = t2 - t1;
-	Vec2i t2t0 = t0 - t2;
+	Vec3f t0t1 = t1 - t0;
+	Vec3f t1t2 = t2 - t1;
+	Vec3f t2t0 = t0 - t2;
 
-	if ( (t0t1.cross_product(t0p) <= 0 && t1t2.cross_product(t1p) <= 0 && t2t0.cross_product(t2p) <= 0) || (t0t1.cross_product(t0p) >= 0 && t1t2.cross_product(t1p) >= 0 && t2t0.cross_product(t2p) >= 0)) {
+	if ( ((t0t1 ^ t0p).z <= 0 && (t1t2 ^ t1p).z <= 0 && (t2t0 ^ t2p).z <= 0) || ((t0t1 ^ t0p).z >= 0 && (t1t2 ^ t1p).z >= 0 && (t2t0 ^ t2p).z >= 0) ) {
 		return true;
 	}
 	return false;
@@ -174,13 +200,13 @@ bool isinside(Vec2i p, Vec2i t0, Vec2i t1, Vec2i t2) {
  * 				 	 AC.x	 AC.y
  * 					 PA.x	 PA.y
 */ 
-Vec3f barycentric(Vec2i p, Vec2i A, Vec2i B, Vec2i C) {
+Vec3f barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C) {
 	//(x, y) = alpha * A + bate * B + gamma * C
 	//alpha = area(BCP) / area(ABC)
 	//beta = area(ACP) / area(ABC)
-	int area = -(A.x - B.x) * (C.y - B.y) + (A.y - B.y) * (C.x - B.x);
-	float  alpha = (-(p.x - B.x) * (C.y - B.y) + (p.y - B.y) * (C.x - B.x)) / (float) area;
-	float beta = -(p.x - C.x) * (A.y - C.y) + (p.y - C.y) * (A.x - C.x) / (float) area;
+	float area = ((B-A) ^ (C - A)).z ;
+	float  alpha = ((C - B) ^ (P - B)).z  / area;
+	float beta = ((P - A) ^ (C -A)).z /area;
 	float gamma = 1 - alpha - beta;
 	return Vec3f(alpha, beta, gamma);
 }
