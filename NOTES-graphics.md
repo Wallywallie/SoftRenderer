@@ -8,3 +8,7 @@
 
 表示 f vert1/tex1/norm1 vert2/tex2/norm2 vert3/tex3/norm3  
 纹理坐标的取值范围为[0, 1],取值时需要根据纹理图片的大小映射到正确的纹理坐标范围
+
+# NDC (Normalized Device Coordinates)
+
+模型文件经过坐标变换之后，坐坐标区间在[-1, 1]之间

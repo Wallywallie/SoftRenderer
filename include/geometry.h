@@ -38,10 +38,12 @@ template <class t> struct Vec3 {
 	inline Vec2<t> toVec2 () const {return Vec2<t>(x, y);}
 };
 
+
 typedef Vec2<float> Vec2f;
 typedef Vec2<int>   Vec2i;
 typedef Vec3<float> Vec3f;
 typedef Vec3<int>   Vec3i;
+
 
 template <class t> std::ostream& operator<<(std::ostream& s, Vec2<t>& v) {
 	s << "(" << v.x << ", " << v.y << ")\n";
@@ -52,5 +54,23 @@ template <class t> std::ostream& operator<<(std::ostream& s, Vec3<t>& v) {
 	s << "(" << v.x << ", " << v.y << ", " << v.z << ")\n";
 	return s;
 }
+
+
+class Matrix {
+    std::vector<std::vector<float> > m;
+    int rows, cols;
+public:
+    Matrix(int r=4, int c=4);
+    Matrix(Vec3f v);
+    int nrows();
+    int ncols();
+    static Matrix identity(int dimensions);
+    std::vector<float>& operator[](const int i);
+    Matrix operator*(const Matrix& a);
+    Matrix transpose();
+    Matrix inverse();
+    friend std::ostream& operator<<(std::ostream& s, Matrix& m);
+};
+
 
 #endif //__GEOMETRY_H__
