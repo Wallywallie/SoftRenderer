@@ -20,7 +20,7 @@ Model::Model(const char *filename) : verts_(), faces_(), vtexs_(), f_vtex_() {
         if (!line.compare(0, 2, "v ")) {
             iss >> trash;
             Vec3f v;
-            for (int i=0;i<3;i++) iss >> v.raw[i];
+            iss >> v.x >> v.y >> v.z;
             verts_.push_back(v);
         } else if (!line.compare(0, 2, "f ")) {
             std::vector<int> f;
@@ -42,7 +42,7 @@ Model::Model(const char *filename) : verts_(), faces_(), vtexs_(), f_vtex_() {
 
             iss >> trash >> trash;
             Vec3f v;
-            for (int i = 0; i < 3; i++) iss >> v.raw[i];
+            iss >> v.x >> v.y >> v.z;
             vtexs_.push_back(v);
             
 

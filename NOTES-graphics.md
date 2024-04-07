@@ -11,4 +11,17 @@
 
 # NDC (Normalized Device Coordinates)
 
-模型文件经过坐标变换之后，坐坐标区间在[-1, 1]之间
+模型文件经过坐标变换之后，坐标区间在[-1, 1]之间
+
+# MVP变换
+
+1. 把相机移到（0，0，0）  
+相机的三个参数：  
+> Position  
+Look-at direction  
+Up direction
+2. 对应的模型也做相应的移动，所以本质上默认相机一直在原点，移动模型
+3. projection
+    orthographic projection
+    perspective projection
+

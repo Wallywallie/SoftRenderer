@@ -2,7 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
-#include "geometry.h"
+#include "../include/geometry.h"
 
 template <> Vec3<float>::Vec3(Matrix m) : x(m[0][0]/m[3][0]), y(m[1][0]/m[3][0]), z(m[2][0]/m[3][0]) {}
 template <> template <> Vec3<int>::Vec3<>(const Vec3<float> &v) : x(int(v.x+.5)), y(int(v.y+.5)), z(int(v.z+.5)) {}
@@ -62,7 +62,8 @@ Matrix Matrix::transpose() {
     return result;
 }
 
-Matrix Matrix::inverse() {
+//计算矩阵的逆矩阵
+Matrix Matrix::inverse() { 
     assert(rows==cols);
     // augmenting the square matrix with the identity matrix of the same dimensions a => [ai]
     Matrix result(rows, cols*2);

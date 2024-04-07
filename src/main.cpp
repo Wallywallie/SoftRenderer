@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 	}
 
 
-
+	//zbuffer 初始化
 	float* zbuffer = new float[width * height];
 	for (int i = 0; i < width * height; i++) {
 		zbuffer[i] = std::numeric_limits<float>::min();
@@ -49,9 +49,12 @@ int main(int argc, char** argv) {
 		Vec3f world_coords[3]; 
 		Vec3f tex_coords[3];//存储纹理坐标
 		for (int j=0; j<3; j++) { 
-			Vec3f v = model->vert(face[j]); 
+			Vec3f v = model->vert(face[j]); //得到顶点坐标
 			Vec3f tex = model->vtex(vt[j]); // 得到纹理坐标
-			screen_coords[j] = Vec3f((v.x+1.)*width/2., (v.y+1.)*height/2., v.z); 
+			//screen_coords[j] =  Vec3f(ViewPort*Projection*ModelView*Matrix(v));
+			screen_coords[j] = viewport(v, width, height); 
+			//TODO:在这里应用model-view-projection
+
 			world_coords[j]  = v; 
 			tex_coords[j] = tex;
 			
@@ -209,4 +212,42 @@ Vec3f barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C) {
 	float beta = ((P - A) ^ (C -A)).z /area;
 	float gamma = 1 - alpha - beta;
 	return Vec3f(alpha, beta, gamma);
+}
+
+//ModelView Matrix
+Matrix ModelView(Vec3f eye, Vec3f center, Vec3f up) {
+    Vec3f z = (eye-center).normalize();
+    Vec3f x = (z^up).normalize();
+    Vec3f y = (x^z).normalize();
+    Matrix Minv = Matrix::identity(3);
+    Matrix Tr   = Matrix::identity(3);
+    for (int i=0; i<3; i++) {
+        Minv[0][i] = x[i]; //这样写是因为旋转矩阵Minv是自己的逆矩阵的转置
+        Minv[1][i] = y[i];
+        Minv[2][i] = z[i];
+
+        Tr[i][3] = -eye[i];
+    }
+    Matrix ModelView = Minv*Tr;
+	return ModelView;
+}
+//perspective = orthro * pres->ortho
+//这里假设相机在Z轴上，离原点距离为c，即一点透视
+Matrix projection(float c) {
+	Matrix persp = Matrix::identity(4);
+	persp[3][2] = -1/c;
+	return persp;
+}
+
+//bi-unit cube [-1,1]*[-1,1]*[-1,1] is mapped onto the screen cube [x,x+w]*[y,y+h]*[0,d].
+Matrix viewport(Vec3f v , int w, int h) {
+    Matrix m = Matrix::identity(4);
+    m[0][3] = v.x+w/2.f;
+    m[1][3] = v.y+h/2.f;
+    m[2][3] = v.z/2.f;
+
+    m[0][0] = w/2.f;
+    m[1][1] = h/2.f;
+    m[2][2] = v.z/2.f;
+    return m;
 }
