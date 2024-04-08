@@ -25,8 +25,9 @@ Matrix Transformation::viewPort(int width, int height, float depth){
 //modelView Matrix
 //eye_position  look_at_direction  up_direction
 //up_direction is not y_axis, but a vector to define the plane 
+//z_axis points outside the screen
 Matrix Transformation::modelView(Vec3f& eye, Vec3f& center, Vec3f& up) {
-    Vec3f z_axis = (center - eye).normalize();
+    Vec3f z_axis = (eye - center).normalize();
     Vec3f x_axis = (z_axis^up).normalize();
     Vec3f y_axis = (x_axis^z_axis).normalize();
     Matrix trans = Matrix::identity(4);
@@ -49,7 +50,7 @@ Matrix Transformation::modelView(Vec3f& eye, Vec3f& center, Vec3f& up) {
 //projection matrix
 //aspect_ratio = width / height
 //TODO: zfar-znear分别代表什么？
-//注意这里使用的是左手系，屏幕里是正值，越远值越大
+//注意这里使用的是右手系，屏幕里是负值，越远值越小
 Matrix Transformation::projection(float eye_fov, float aspect_ratio, float zNear, float zFar){
     Matrix pers_ortho(4,4);
     Matrix orthro = Matrix::identity(4);
@@ -57,7 +58,8 @@ Matrix Transformation::projection(float eye_fov, float aspect_ratio, float zNear
     float angle = eye_fov /(float)180 * PI;//角度转弧度
     float height = 2 * zNear * std::tan(angle / 2);
     float width = height * aspect_ratio;
-
+    zNear = -zNear;
+    zFar = -zFar;
     pers_ortho[0][0] = zNear;
     pers_ortho[1][1] = zNear;
     pers_ortho[2][2] = zNear + zFar;
@@ -70,7 +72,7 @@ Matrix Transformation::projection(float eye_fov, float aspect_ratio, float zNear
 
     orthro_scale[0][0] = 2 / width;
     orthro_scale[1][1] = 2 / height;
-    orthro_scale[2][2] = 2 / (zFar - zNear);
+    orthro_scale[2][2] = 2 / (zNear - zFar);
 
     orthro = orthro_scale  * orthro_trans;
 

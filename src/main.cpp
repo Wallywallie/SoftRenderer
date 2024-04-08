@@ -25,8 +25,8 @@ Matrix ModelView(Vec3f eye, Vec3f center, Vec3f up) {
     Vec3f z = (eye-center).normalize();
     Vec3f x = (z^up).normalize();
     Vec3f y = (x^z).normalize();
-    Matrix Minv = Matrix::identity(3);
-    Matrix Tr   = Matrix::identity(3);
+    Matrix Minv = Matrix::identity(4);
+    Matrix Tr   = Matrix::identity(4);
     for (int i=0; i<3; i++) {
         Minv[0][i] = x[i]; //这样写是因为旋转矩阵Minv是自己的逆矩阵的转置
         Minv[1][i] = y[i];
@@ -80,8 +80,8 @@ int main(int argc, char** argv) {
 		zbuffer[i] = std::numeric_limits<float>::min();
 	}
 	
-	Vec3f light_dir(0,0,-1); // define light_dir
-	Vec3f eye_pos(0, 0, -5);
+	Vec3f light_dir(0,0,1); // define light_dir
+	Vec3f eye_pos(0, 0, 5);
 	Vec3f center(0,0,0);
 	Vec3f up(0,1,0);
 	for (int i=0; i<model->nfaces(); i++) { 
@@ -92,26 +92,17 @@ int main(int argc, char** argv) {
 		Vec3f tex_coords[3];//存储纹理坐标
 		for (int j=0; j<3; j++) { 
 			Vec3f v = model->vert(face[j]); //得到顶点坐标
-			Vec3f tex = model->vtex(vt[j]); // 得到纹理坐标
-			//screen_coords[j] =  Vec3f(ViewPort*Projection*ModelView*Matrix(v));
-			//screen_coords[j] = viewport(v, width, height); 
-			//TODO:在这里应用model-view-projection
-			//Matrix transformation = Transformation::viewPort(width, height, v.z)* Transformation::projection(120, 2, 5, 10) * Transformation::modelView(eye_pos, center, up)* Matrix(v);
-			//std::cout << "transformation : "<< transformation << std::endl;
+			Matrix transformation = Transformation::viewPort(width, height, 255)* Transformation::projection(120, 2, -5, -10) * Transformation::modelView(eye_pos, center, up);
+			Matrix mdoelv = transformation;
+
+			std::cout << "-----------transformation-----------"<<std::endl;
+			std::cout << mdoelv  <<std::endl;
 			Matrix transformation2 = viewport(v,width, height)*projection(5)*ModelView(eye_pos, center, up);
-			std::cout <<"transformation2 : "<< transformation2 << std::endl;
-			screen_coords[j] = Vec3f(transformation * Matrix(v));
-			world_coords[j]  = v; 
-			tex_coords[j] = tex;
-			
+			Matrix modelv2 = viewport(v,width, height);
+			std::cout << "-----------transformation2-----------"<<std::endl;
+			std::cout <<  transformation2 << std::endl;
 		} 
-		Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
-		n.normalize(); 
-		float intensity = n*light_dir; 
-		if (intensity>0) { //back-face culling 
-			triangle(screen_coords, zbuffer, image, tex, tex_coords, intensity);
-			
-		} 
+
 	}
 	
 
