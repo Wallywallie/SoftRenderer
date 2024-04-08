@@ -21,7 +21,7 @@
 Look-at direction  
 Up direction
 2. 对应的模型也做相应的移动，所以本质上默认相机一直在原点，移动模型
-3. projection
-    orthographic projection
-    perspective projection
+3. projection:  
+    - orthographic projection
+    - perspective projection
 

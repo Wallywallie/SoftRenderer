@@ -12,5 +12,21 @@ public:
 };
 
 
+class FlatShading : public Shader {
+    
+    virtual Vec3f vertex() override {
+
+    }
+
+};
+
+class GouraudShading : public Shader{
+
+};
+
+class PhongShading : public Shader{
+
+};
+
 
 #endif __SHADER__

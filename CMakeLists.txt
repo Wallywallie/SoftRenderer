@@ -8,6 +8,8 @@ set(EXECUTABLE_OUTPUT_PATH "${PROJECT_SOURCE_DIR}/bin")
 set(SOURCES
     src/model.cpp
     src/tgaimage.cpp
+    src/geometry.cpp
+    src/transformation.cpp
 )
 
 # 添加库，包含源文件

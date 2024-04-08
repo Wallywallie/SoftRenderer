@@ -1,6 +1,7 @@
 #include "../include/tgaimage.h"
 #include "../include/model.h"
 #include "../include/geometry.h"
+#include "../include/transformation.h"
 #include <iostream>
 #include <direct.h>
 #include <algorithm>
@@ -18,6 +19,44 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
 void triangle(Vec3f *pts,float *zbuffer, TGAImage &image,TGAImage &tex, Vec3f *tex_coor, float intensiy);
 bool isinside(Vec3f p, Vec3f t0, Vec3f t1, Vec3f t2) ;
 Vec3f barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C);
+
+//ModelView Matrix
+Matrix ModelView(Vec3f eye, Vec3f center, Vec3f up) {
+    Vec3f z = (eye-center).normalize();
+    Vec3f x = (z^up).normalize();
+    Vec3f y = (x^z).normalize();
+    Matrix Minv = Matrix::identity(3);
+    Matrix Tr   = Matrix::identity(3);
+    for (int i=0; i<3; i++) {
+        Minv[0][i] = x[i]; //这样写是因为旋转矩阵Minv是自己的逆矩阵的转置
+        Minv[1][i] = y[i];
+        Minv[2][i] = z[i];
+
+        Tr[i][3] = -eye[i];
+    }
+    Matrix ModelView = Minv*Tr;
+	return ModelView;
+}
+//perspective = orthro * pres->ortho
+//这里假设相机在Z轴上，离原点距离为c，即一点透视
+Matrix projection(float c) {
+	Matrix persp = Matrix::identity(4);
+	persp[3][2] = -1/c;
+	return persp;
+}
+
+//bi-unit cube [-1,1]*[-1,1]*[-1,1] is mapped onto the screen cube [x,x+w]*[y,y+h]*[0,d].
+Matrix viewport(Vec3f v , int w, int h) {
+    Matrix m = Matrix::identity(4);
+    m[0][3] = v.x+w/2.f;
+    m[1][3] = v.y+h/2.f;
+    m[2][3] = v.z/2.f;
+
+    m[0][0] = w/2.f;
+    m[1][1] = h/2.f;
+    m[2][2] = v.z/2.f;
+    return m;
+}
 
 int main(int argc, char** argv) {
 	TGAImage image(width, height, TGAImage::RGB);
@@ -42,6 +81,9 @@ int main(int argc, char** argv) {
 	}
 	
 	Vec3f light_dir(0,0,-1); // define light_dir
+	Vec3f eye_pos(0, 0, -5);
+	Vec3f center(0,0,0);
+	Vec3f up(0,1,0);
 	for (int i=0; i<model->nfaces(); i++) { 
 		std::vector<int> face = model->face(i); 
 		std::vector<int> vt = model->fvtex(i); //从obj的f 得到三个vt的索引
@@ -52,9 +94,13 @@ int main(int argc, char** argv) {
 			Vec3f v = model->vert(face[j]); //得到顶点坐标
 			Vec3f tex = model->vtex(vt[j]); // 得到纹理坐标
 			//screen_coords[j] =  Vec3f(ViewPort*Projection*ModelView*Matrix(v));
-			screen_coords[j] = viewport(v, width, height); 
+			//screen_coords[j] = viewport(v, width, height); 
 			//TODO:在这里应用model-view-projection
-
+			//Matrix transformation = Transformation::viewPort(width, height, v.z)* Transformation::projection(120, 2, 5, 10) * Transformation::modelView(eye_pos, center, up)* Matrix(v);
+			//std::cout << "transformation : "<< transformation << std::endl;
+			Matrix transformation2 = viewport(v,width, height)*projection(5)*ModelView(eye_pos, center, up);
+			std::cout <<"transformation2 : "<< transformation2 << std::endl;
+			screen_coords[j] = Vec3f(transformation * Matrix(v));
 			world_coords[j]  = v; 
 			tex_coords[j] = tex;
 			
@@ -214,40 +260,3 @@ Vec3f barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C) {
 	return Vec3f(alpha, beta, gamma);
 }
 
-//ModelView Matrix
-Matrix ModelView(Vec3f eye, Vec3f center, Vec3f up) {
-    Vec3f z = (eye-center).normalize();
-    Vec3f x = (z^up).normalize();
-    Vec3f y = (x^z).normalize();
-    Matrix Minv = Matrix::identity(3);
-    Matrix Tr   = Matrix::identity(3);
-    for (int i=0; i<3; i++) {
-        Minv[0][i] = x[i]; //这样写是因为旋转矩阵Minv是自己的逆矩阵的转置
-        Minv[1][i] = y[i];
-        Minv[2][i] = z[i];
-
-        Tr[i][3] = -eye[i];
-    }
-    Matrix ModelView = Minv*Tr;
-	return ModelView;
-}
-//perspective = orthro * pres->ortho
-//这里假设相机在Z轴上，离原点距离为c，即一点透视
-Matrix projection(float c) {
-	Matrix persp = Matrix::identity(4);
-	persp[3][2] = -1/c;
-	return persp;
-}
-
-//bi-unit cube [-1,1]*[-1,1]*[-1,1] is mapped onto the screen cube [x,x+w]*[y,y+h]*[0,d].
-Matrix viewport(Vec3f v , int w, int h) {
-    Matrix m = Matrix::identity(4);
-    m[0][3] = v.x+w/2.f;
-    m[1][3] = v.y+h/2.f;
-    m[2][3] = v.z/2.f;
-
-    m[0][0] = w/2.f;
-    m[1][1] = h/2.f;
-    m[2][2] = v.z/2.f;
-    return m;
-}
