@@ -6,17 +6,16 @@
 const float PI = 3.1415926535;
 
 //bi-unit cube [-1,1]*[-1,1]*[-1,1] is mapped onto the screen cube [x,x+w]*[y,y+h]*[0,d].
-Matrix Transformation::viewPort(int width, int height, float depth){
+Matrix Transformation::viewPort(int width, int height){
     Matrix viewPort = Matrix::identity(4);
     //trans
     viewPort[0][3] = width / (float)2; 
     viewPort[1][3] = height / (float)2;
-    viewPort[2][3] = depth / 2;
+
 
     //scale
     viewPort[0][0] = width/(float)2;
     viewPort[1][1] = height / (float)2;
-    viewPort[2][2] = depth / 2; 
     return viewPort;
 
 }
@@ -58,14 +57,15 @@ Matrix Transformation::projection(float eye_fov, float aspect_ratio, float zNear
     float angle = eye_fov /(float)180 * PI;//角度转弧度
     float height = 2 * zNear * std::tan(angle / 2);
     float width = height * aspect_ratio;
-    zNear = -zNear;
-    zFar = -zFar;
+
     pers_ortho[0][0] = zNear;
     pers_ortho[1][1] = zNear;
     pers_ortho[2][2] = zNear + zFar;
     pers_ortho[2][3] = -zFar * zNear;
     pers_ortho[3][2] = 1;
 
+    zNear = -zNear;
+    zFar = -zFar;
     Matrix orthro_trans = Matrix::identity(4);
     Matrix orthro_scale = Matrix::identity(4);
     orthro_trans[3][2] = -(zNear + zFar) / (float)2;

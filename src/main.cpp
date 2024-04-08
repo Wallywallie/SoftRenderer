@@ -77,13 +77,19 @@ int main(int argc, char** argv) {
 	//zbuffer 初始化
 	float* zbuffer = new float[width * height];
 	for (int i = 0; i < width * height; i++) {
-		zbuffer[i] = std::numeric_limits<float>::min();
+		zbuffer[i] = std::numeric_limits<float>::lowest();//std::numeric_limits<float>::min()返回的是 float 类型的最小正数值
 	}
 	
-	Vec3f light_dir(0,0,1); // define light_dir
-	Vec3f eye_pos(0, 0, 5);
+	Vec3f light_dir(0,0,-1); // define light_dir
+	Vec3f eye_pos(0, 0, 1);
 	Vec3f center(0,0,0);
 	Vec3f up(0,1,0);
+	Matrix transformation = Transformation::viewPort(width, height)* Transformation::projection(70, 1, 0.1, 1) * Transformation::modelView(eye_pos, center, up);
+	//TODO: segmentation fault in zbuffer
+	//TODO: the image facing downwards
+	//TODO: corret parameter for camera
+	//TODO: wandering in the scene
+
 	for (int i=0; i<model->nfaces(); i++) { 
 		std::vector<int> face = model->face(i); 
 		std::vector<int> vt = model->fvtex(i); //从obj的f 得到三个vt的索引
@@ -92,20 +98,21 @@ int main(int argc, char** argv) {
 		Vec3f tex_coords[3];//存储纹理坐标
 		for (int j=0; j<3; j++) { 
 			Vec3f v = model->vert(face[j]); //得到顶点坐标
-			Matrix transformation = Transformation::viewPort(width, height, 255)* Transformation::projection(120, 2, -5, -10) * Transformation::modelView(eye_pos, center, up);
-			Matrix mdoelv = transformation;
-
-			std::cout << "-----------transformation-----------"<<std::endl;
-			std::cout << mdoelv  <<std::endl;
-			Matrix transformation2 = viewport(v,width, height)*projection(5)*ModelView(eye_pos, center, up);
-			Matrix modelv2 = viewport(v,width, height);
-			std::cout << "-----------transformation2-----------"<<std::endl;
-			std::cout <<  transformation2 << std::endl;
+			Vec3f tex = model->vtex(vt[j]); // 得到纹理坐标
+			screen_coords[j] = Vec3f(transformation * Matrix(v));
+			world_coords[j]  = v; 
+			tex_coords[j] = tex;	
+			if (screen_coords[j][0] > 800 || screen_coords[j][0] < 0) {std::cout << "out of range" << std::endl;}
 		} 
+		Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
+		n.normalize(); 
+		float intensity = n*light_dir; 
+		if (intensity>0) { //back-face culling 
 
-	}
-	
-
+			triangle(screen_coords, zbuffer, image, tex, tex_coords, intensity);				
+		} 		
+	} 
+		
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga");
 	delete(model);
@@ -182,11 +189,15 @@ void triangle(Vec3f *pts,float *zbuffer, TGAImage &image,TGAImage &tex, Vec3f *t
 	for (int i = std::floor(xmin); i <= std::ceil(xmax); i++) {
 		for (int j = std::floor(ymin); j <= std::ceil(ymax); j++) {
 			Vec3f p(i + 0.5, j + 0.5, 0);
-			
 			if (isinside(p, pts[0], pts[1], pts[2])) {
+
 				Vec3f baryCoor = barycentric(p, pts[0], pts[1], pts[2]);
 
 				p.z = baryCoor.x * pts[0].z + baryCoor.y * pts[1].z +  baryCoor.z * pts[2].z;
+				
+				//std::cout << p.z << std::endl;
+				//std::cout << zbuffer[i + j * width] << std::endl;
+				int x = i + j * width;
 				if (p.z > zbuffer[i + j * width]) {
 					zbuffer[i + j * width] = p.z;
 
@@ -200,6 +211,7 @@ void triangle(Vec3f *pts,float *zbuffer, TGAImage &image,TGAImage &tex, Vec3f *t
 					TGAColor color = tex.get(coor.x * tex.get_width(), coor.y * tex.get_height()) ; //纹理坐标得取值为[0, 1],映射到像素空间
 					color = TGAColor(color.r * intensiy, color.g*intensiy, color.b * intensiy, color.a);
 					image.set(i, j, color);
+					//std::cout << "i: " << i << "j: " << j <<"color: " << color.val << std::endl;
 					
 				}
 

@@ -6,7 +6,7 @@ class Transformation {
 public:
     Transformation() {}
 
-    static Matrix viewPort(int width, int height, float depth);
+    static Matrix viewPort(int width, int height);
 
     static Matrix modelView(Vec3f& eye, Vec3f& center, Vec3f& up);
 

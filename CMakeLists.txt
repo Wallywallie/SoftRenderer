@@ -15,7 +15,7 @@ set(SOURCES
 # 添加库，包含源文件
 add_library(my_library ${SOURCES})
 
-add_definitions("-Wall -ggdb -g -pg -O2")
+add_definitions("-Wall -ggdb -g -pg -O0")
 
 add_executable(renderer src/main.cpp)
 target_link_libraries(renderer PRIVATE my_library)
