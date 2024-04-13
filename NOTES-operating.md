@@ -32,3 +32,6 @@ not solved yet.
 # Debugging
 
 ctrl + f5
+
+# extern 关键字
+需要在另一个文件中*定义*

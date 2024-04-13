@@ -30,7 +30,7 @@ struct TGAColor {
 		unsigned char raw[4];
 		unsigned int val;
 	};
-	int bytespp;
+	int bytespp;//bytes per pixel
 
 	TGAColor() : val(0), bytespp(1) {
 	}
@@ -57,6 +57,11 @@ struct TGAColor {
 		}
 		return *this;
 	}
+
+	unsigned char& operator[](const int i) { return raw[i]; }
+
+
+
 };
 
 

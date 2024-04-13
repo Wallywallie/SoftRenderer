@@ -9,8 +9,11 @@ set(SOURCES
     src/model.cpp
     src/tgaimage.cpp
     src/geometry.cpp
-    src/transformation.cpp
+    src/shader.cpp
 )
+
+# Enable C++17
+set(CMAKE_CXX_STANDARD 17)
 
 # 添加库，包含源文件
 add_library(my_library ${SOURCES})
