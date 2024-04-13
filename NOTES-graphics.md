@@ -26,4 +26,29 @@ Up direction
     - perspective projection
 
 # 右手系
+该项目是右手系，屏幕内的空间坐标为负值
+
+# Shading frequency
+- flat shading: **triangle fasce** as shading point
+- Gouraud shading: **triangle vertices** as shading point (vertex processing,顶点着色)
+- phong shading: **pixel** as shading point (fragment processing，片元着色)
+
+# OpenGL2 pipeline
+Vertes Data -> Primitive Processing -> **Vertex Shader** -> Primitive Assemblly ->Rasterizer -> **Fragment Shader** ->Depth&Stencil -> Color Buffer Blend -> Dither -> Frame Buffer  
+- Vertex Shader:  
+    - transform the coordinates of the vertices
+    - prepare data for the fragment shader  
+- Fragment Shader:  
+    - determine the color of the current pixel
+    - discard current pixel by returning true
+
+# 切线空间（Darboux frame，so-called tangent space）
+切线空间三个轴分别是tangent轴、bitangent轴、法线轴，简称TBN坐标系。
+局部空间的法线乘以变换矩阵得到切线空间的法线信息，再映射到rgb就是切线空间的法线贴图
+z-与物体表面垂直
+x-主曲率方向(principal curvature direction)
+y-z^x
+
+
+
 
