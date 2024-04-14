@@ -40,7 +40,7 @@ public:
     void set_transformation(Camera camera, int width, int height);
 
     virtual Vec3f vertex(Model* model, int ithFace, int jthVert) = 0;//从模型读顶点，返回顶点坐标
-    virtual bool fragment(Vec3f bary, TGAColor &color, TGAImage &tex) = 0; //处理插值
+    virtual bool fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) = 0; //处理插值
     void triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<float> &zbuffer, TGAImage& tex);
     
     
@@ -53,13 +53,19 @@ protected:
 
 
 class FlatShading : public Shader {
+
+public:    
+    bool fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) override; 
+    Vec3f vertex(Model* model, int ithFace, int jthVert) override;
+private:
+    Vec3f world_coords[3];    
 };
 
 class GouraudShading : public Shader{
-    
+
 public:    
+    bool fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) override; 
     Vec3f vertex(Model* model, int ithFace, int jthVert) override;
-    bool fragment(Vec3f bary, TGAColor &color, TGAImage &tex) override; 
 };
 
 

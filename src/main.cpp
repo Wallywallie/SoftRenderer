@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 	//TODO: corret parameter for camera
 	//TODO: wandering in the scene
 
-	GouraudShading shader;
+	FlatShading shader;
 	Camera camera;
 	
 	shader.set_transformation(camera, width, height);
@@ -62,11 +62,9 @@ int main(int argc, char** argv) {
 		for (int j=0; j<3; j++) { 
 			screen_coords[j] = shader.vertex(model, i, j);
 		} 
-
 		shader.triangle(screen_coords, shader, image, zbuffer, tex);				
-		
 	} 
-		
+
 	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
 	image.write_tga_file("output.tga");
 	delete(model);

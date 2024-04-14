@@ -32,6 +32,30 @@ bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) { 
 	return false;
 }
 
+Vec3f FlatShading::vertex(Model* model, int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
+		Vec3f vert = model->vert(ithFace, jthVert);
+		world_coords[jthVert] = vert;
+		Vec3f screen_coor = Vec3f( transformation * Matrix(vert));
+
+		uv[jthVert] = model -> uv(ithFace, jthVert); 
+
+		return screen_coor;
+
+
+}
+bool FlatShading::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) {
+	Vec3f n = (world_coords[1]-world_coords[0]) ^ (world_coords[2]-world_coords[0]); 
+	n.normalize(); 
+	float intensity =n * light_dir;
+	Vec2f coor = (uv[0] * baryCoor.x + uv[1] * baryCoor.y + uv[2] * baryCoor.z);
+	color = tex.get(coor.x * tex.get_width(), coor.y * tex.get_height());//纹理坐标得取值为[0, 1],映射到像素空间
+	for (int i = 0; i < color.bytespp; i++) {
+		color.raw[i] *= intensity;
+	}
+	return intensity > 0 ? false : true; //back_face culling
+}
+
+
 void Shader::set_transformation(Camera camera, int width, int height) {
 	transformation =viewPort(width, height) * projection(camera.fov, camera.aspect_ratio, camera.zNear, camera.zFar) * modelView(camera.eye_pos, camera.center, camera.up);
 }
@@ -58,12 +82,16 @@ void Shader::triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<f
 
 				p.z = baryCoor.x * pts[0].z + baryCoor.y * pts[1].z +  baryCoor.z * pts[2].z;//深度插值
 				if (p.z > zbuffer[i + j * width]) {
-					zbuffer[i + j * width] = p.z;
+					
 					
 					//对纹理进行插值，得到颜色
-					shader.fragment(baryCoor,  color, tex);
-					image.set(i, j, color);
-					//if (color.val > 0) std::cout << "i: " << i << "j: " << j <<"color: " << color.val << std::endl;
+					bool disgard = shader.fragment(baryCoor,  color, tex);
+					if (!disgard) {
+						zbuffer[i + j * width] = p.z;
+						image.set(i, j, color);
+						//if (color.val > 0) std::cout << "i: " << i << "j: " << j <<"color: " << color.val << std::endl;
+					}
+
 					
 				}
 			}
@@ -229,7 +257,6 @@ Vec3f Shader::barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C) {
 	float gamma = 1 - alpha - beta;
 	return Vec3f(alpha, beta, gamma);
 }
-
 
 bool Shader::isinside(Vec3f p, Vec3f t0, Vec3f t1, Vec3f t2) {
 	Vec3f t0p = p - t0;
