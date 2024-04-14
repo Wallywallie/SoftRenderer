@@ -8,7 +8,7 @@ const float PI = 3.1415926535;
 extern int width;
 extern Vec3f light_dir;
 
-Vec3f Shader::vertex(Model* model, int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
+Vec3f GouraudShading::vertex(Model* model, int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
 		Vec3f vert = model->vert(ithFace, jthVert);
 		Vec3f screen_coor = Vec3f( transformation * Matrix(vert));
 
@@ -20,7 +20,7 @@ Vec3f Shader::vertex(Model* model, int ithFace, int jthVert) { //处理顶点信
 
 
 }
-bool Shader::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) { //处理三角形内部：-uv坐标插值 -颜色：纹理、光照
+bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) { //处理三角形内部：-uv坐标插值 -颜色：纹理、光照
 	float intensity = varying_intensity * baryCoor;
 	
 	intensity = std::clamp(intensity, 0.f, 1.f);

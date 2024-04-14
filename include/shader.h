@@ -32,32 +32,23 @@ public:
 
     //virtual ~Shader();
     static Matrix viewPort(int width, int height);
-
     static Matrix modelView(Vec3f& eye, Vec3f& center, Vec3f& up);
-
     static Matrix projection(float eye_fov, float aspect_ratio, float zNear, float zFar);
     static void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
     static Vec3f barycentric(Vec3f P, Vec3f A, Vec3f B, Vec3f C);
     static bool isinside(Vec3f p, Vec3f t0, Vec3f t1, Vec3f t2);
-
-
-    virtual Vec3f vertex(Model* model, int ithFace, int jthVert);//从模型读顶点，返回顶点坐标
-
-    virtual bool fragment(Vec3f bary, TGAColor &color, TGAImage &tex); //处理插值
-
-
-    virtual void triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<float> &zbuffer, TGAImage& tex);
     void set_transformation(Camera camera, int width, int height);
+
+    virtual Vec3f vertex(Model* model, int ithFace, int jthVert) = 0;//从模型读顶点，返回顶点坐标
+    virtual bool fragment(Vec3f bary, TGAColor &color, TGAImage &tex) = 0; //处理插值
+    void triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<float> &zbuffer, TGAImage& tex);
+    
     
 
-private:
+protected:
     Vec3f varying_intensity;//顶点着色器写入数据，片元着色器做插值,三角形每个顶点的法向量与光线方向的点乘
-
     Vec2f uv[3];
     Matrix transformation;
-
-
-
 };
 
 
@@ -65,12 +56,14 @@ class FlatShading : public Shader {
 };
 
 class GouraudShading : public Shader{
+    
+public:    
+    Vec3f vertex(Model* model, int ithFace, int jthVert) override;
+    bool fragment(Vec3f bary, TGAColor &color, TGAImage &tex) override; 
 };
 
 
-class PhongShading : public Shader{
 
-};
 
 class WireFrame : public Shader{
 

@@ -44,11 +44,11 @@ Vertes Data -> Primitive Processing -> **Vertex Shader** -> Primitive Assemblly 
 
 # 切线空间（Darboux frame，so-called tangent space）
 切线空间三个轴分别是tangent轴、bitangent轴、法线轴，简称TBN坐标系。
-局部空间的法线乘以变换矩阵得到切线空间的法线信息，再映射到rgb就是切线空间的法线贴图
-z-与物体表面垂直
-x-主曲率方向(principal curvature direction)
-y-z^x
+局部空间的法线乘以变换矩阵得到切线空间的法线信息，再映射到rgb就是切线空间的法线贴图  
+- z-与物体表面垂直
+- x-主曲率方向(principal curvature direction)
+- y-z^x
 
-
+# Blinn-Phong 光照模型
 
 

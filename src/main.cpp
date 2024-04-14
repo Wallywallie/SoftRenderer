@@ -53,11 +53,7 @@ int main(int argc, char** argv) {
 	//TODO: corret parameter for camera
 	//TODO: wandering in the scene
 
-
-
-
-	
-	Shader shader;
+	GouraudShading shader;
 	Camera camera;
 	
 	shader.set_transformation(camera, width, height);
