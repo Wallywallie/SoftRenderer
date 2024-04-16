@@ -30,8 +30,12 @@ Up direction
 
 # Shading frequency
 - flat shading: **triangle fasce** as shading point
-- Gouraud shading: **triangle vertices** as shading point (vertex processing,顶点着色)
-- phong shading: **pixel** as shading point (fragment processing，片元着色)
+- Gouraud shading: **triangle vertices** as shading point (vertex processing,顶点着色)  
+    - 顶点的法线算出顶点的颜色，像素的颜色：顶点的颜色插值得到
+    - Vertex Shader写光照模型，输出颜色给Fragment Shader插值颜色
+- phong shading: **pixel** as shading point (fragment processing，片元着色)  
+    - 像素的法线用顶点法线插值得出，像素的颜色：每个像素单独法线计算颜色
+    - Vertex Shader计算顶点法线，中输入插值后得到的像素法线信息，写光照模型，输出颜色
 
 # OpenGL2 pipeline
 Vertes Data -> Primitive Processing -> **Vertex Shader** -> Primitive Assemblly ->Rasterizer -> **Fragment Shader** ->Depth&Stencil -> Color Buffer Blend -> Dither -> Frame Buffer  
@@ -41,6 +45,11 @@ Vertes Data -> Primitive Processing -> **Vertex Shader** -> Primitive Assemblly 
 - Fragment Shader:  
     - determine the color of the current pixel
     - discard current pixel by returning true
+
+# normal mapping
+法线贴图储存的是global coordinates
+求变换到NDC空间中的法线和光线的点乘
+直接求世界坐标的法线和光线的点乘
 
 # 切线空间（Darboux frame，so-called tangent space）
 切线空间三个轴分别是tangent轴、bitangent轴、法线轴，简称TBN坐标系。

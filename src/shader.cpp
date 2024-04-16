@@ -7,48 +7,72 @@ const float PI = 3.1415926535;
 
 extern int width;
 extern Vec3f light_dir;
+extern Model* model;
 
-Vec3f GouraudShading::vertex(Model* model, int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
+Vec3f GouraudShading::vertex(int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
 		Vec3f vert = model->vert(ithFace, jthVert);
-		Vec3f screen_coor = Vec3f( transformation * Matrix(vert));
+		Vec3f screen_coor = Vec3f(  _viewPort * transformation * Matrix(vert));
 
+		//光照模型
 		Vec3f normal = model -> normal(ithFace, jthVert);
 		varying_intensity[jthVert] = std::max(0.f, normal * light_dir);
-		uv[jthVert] = model -> uv(ithFace, jthVert); 
+
+		varying_uv[jthVert] = model -> uv(ithFace, jthVert); 
 
 		return screen_coor;
-
-
 }
-bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) { //处理三角形内部：-uv坐标插值 -颜色：纹理、光照
-	float intensity = varying_intensity * baryCoor;
+
+
+bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color) { //处理三角形内部：-uv坐标插值 -颜色：纹理、光照、法线贴图
 	
+	
+	Matrix transformation_inverse_transpose = transformation.inverse().transpose();
+	Vec2f coor = (varying_uv[0] * baryCoor.x + varying_uv[1] * baryCoor.y + varying_uv[2] * baryCoor.z);
+
+
+	/** 原光照
+	float intensity = varying_intensity * baryCoor;
 	intensity = std::clamp(intensity, 0.f, 1.f);
-	Vec2f coor = (uv[0] * baryCoor.x + uv[1] * baryCoor.y + uv[2] * baryCoor.z);
-	color = tex.get(coor.x * tex.get_width(), coor.y * tex.get_height());//纹理坐标得取值为[0, 1],映射到像素空间
+	*/
+
+	//TODO: normal mapping and tbn tangent space to be solved!!!
+	//nomal mapping:transfer to world coor
+	//求与变换后的模型平面垂直的法向量
+	//变换后的法线是原法线乘以变换矩阵的逆矩阵的转置
+	Vec3f normal = model->normal(coor); //原法线
+	Vec3f trans_normal = Vec3f(transformation_inverse_transpose * Matrix(normal)).normalize(); //仿射变换后的法线
+	Vec3f light = Vec3f(transformation * Matrix(light_dir)).normalize(); //仿射变换后的灯光
+	float intensity = trans_normal * light ;
+	intensity = std::clamp(-intensity, 0.f, 1.f);
+	std::cout << intensity << std::endl;
+	
+	
+	color = model->diffuse(coor);//纹理坐标得取值为[0, 1],映射到像素空间
 	for (int i = 0; i < color.bytespp; i++) {
 		color.raw[i] *= intensity;
 	}
 	return false;
 }
 
-Vec3f FlatShading::vertex(Model* model, int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
+
+
+Vec3f FlatShading::vertex( int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
 		Vec3f vert = model->vert(ithFace, jthVert);
 		world_coords[jthVert] = vert;
-		Vec3f screen_coor = Vec3f( transformation * Matrix(vert));
+		Vec3f screen_coor = Vec3f( _viewPort * transformation * Matrix(vert));
 
-		uv[jthVert] = model -> uv(ithFace, jthVert); 
+		varying_uv[jthVert] = model -> uv(ithFace, jthVert); 
 
 		return screen_coor;
 
 
 }
-bool FlatShading::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) {
+bool FlatShading::fragment(Vec3f baryCoor, TGAColor &color) {
 	Vec3f n = (world_coords[1]-world_coords[0]) ^ (world_coords[2]-world_coords[0]); 
 	n.normalize(); 
 	float intensity =n * light_dir;
-	Vec2f coor = (uv[0] * baryCoor.x + uv[1] * baryCoor.y + uv[2] * baryCoor.z);
-	color = tex.get(coor.x * tex.get_width(), coor.y * tex.get_height());//纹理坐标得取值为[0, 1],映射到像素空间
+	Vec2f coor = (varying_uv[0] * baryCoor.x + varying_uv[1] * baryCoor.y + varying_uv[2] * baryCoor.z);
+	color = model->diffuse(coor);;//纹理坐标得取值为[0, 1],映射到像素空间
 	for (int i = 0; i < color.bytespp; i++) {
 		color.raw[i] *= intensity;
 	}
@@ -57,7 +81,10 @@ bool FlatShading::fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) {
 
 
 void Shader::set_transformation(Camera camera, int width, int height) {
-	transformation =viewPort(width, height) * projection(camera.fov, camera.aspect_ratio, camera.zNear, camera.zFar) * modelView(camera.eye_pos, camera.center, camera.up);
+	_viewPort = viewPort(width, height);
+	_projection = projection(camera.fov, camera.aspect_ratio, camera.zNear, camera.zFar);
+	_modelView = modelView(camera.eye_pos, camera.center, camera.up);
+	transformation = _projection * _modelView;
 }
 
 
@@ -77,15 +104,13 @@ void Shader::triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<f
 			if (isinside(p, pts[0], pts[1], pts[2])) {
 
 				Vec3f baryCoor = barycentric(p, pts[0], pts[1], pts[2]);
-
-
-
+				
 				p.z = baryCoor.x * pts[0].z + baryCoor.y * pts[1].z +  baryCoor.z * pts[2].z;//深度插值
 				if (p.z > zbuffer[i + j * width]) {
 					
 					
 					//对纹理进行插值，得到颜色
-					bool disgard = shader.fragment(baryCoor,  color, tex);
+					bool disgard = shader.fragment(baryCoor,  color);
 					if (!disgard) {
 						zbuffer[i + j * width] = p.z;
 						image.set(i, j, color);

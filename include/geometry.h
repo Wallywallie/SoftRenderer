@@ -62,6 +62,7 @@ class Matrix {
 public:
     Matrix(int r=4, int c=4);
     Matrix(Vec3f v);
+    Matrix(Vec3f v, float t) ;
     int nrows();
     int ncols();
     static Matrix identity(int dimensions);
@@ -70,6 +71,8 @@ public:
     Matrix transpose();
     Matrix inverse();
     friend std::ostream& operator<<(std::ostream& s, Matrix& m);
+
+   
 };
 
 

@@ -39,24 +39,28 @@ public:
     static bool isinside(Vec3f p, Vec3f t0, Vec3f t1, Vec3f t2);
     void set_transformation(Camera camera, int width, int height);
 
-    virtual Vec3f vertex(Model* model, int ithFace, int jthVert) = 0;//从模型读顶点，返回顶点坐标
-    virtual bool fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) = 0; //处理插值
+    virtual Vec3f vertex( int ithFace, int jthVert) = 0;//从模型读顶点，返回顶点坐标
+    virtual bool fragment(Vec3f baryCoor, TGAColor &color) = 0; //处理插值
     void triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<float> &zbuffer, TGAImage& tex);
     
     
 
 protected:
-    Vec3f varying_intensity;//顶点着色器写入数据，片元着色器做插值,三角形每个顶点的法向量与光线方向的点乘
-    Vec2f uv[3];
+
     Matrix transformation;
+    Matrix _viewPort;
+    Matrix _projection;
+    Matrix _modelView;
+    Vec2f varying_uv[3];
+    
 };
 
 
 class FlatShading : public Shader {
 
 public:    
-    bool fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) override; 
-    Vec3f vertex(Model* model, int ithFace, int jthVert) override;
+    bool fragment(Vec3f baryCoor, TGAColor &color) override; 
+    Vec3f vertex(int ithFace, int jthVert) override;
 private:
     Vec3f world_coords[3];    
 };
@@ -64,8 +68,13 @@ private:
 class GouraudShading : public Shader{
 
 public:    
-    bool fragment(Vec3f baryCoor, TGAColor &color, TGAImage &tex) override; 
-    Vec3f vertex(Model* model, int ithFace, int jthVert) override;
+    bool fragment(Vec3f baryCoor, TGAColor &color) override; 
+    Vec3f vertex( int ithFace, int jthVert) override;
+
+private:
+    Vec3f varying_intensity;//顶点着色器写入数据，片元着色器做插值,三角形每个顶点的法向量与光线方向的点乘
+    Vec3f varying_normal[3];//从法线贴图读入
+
 };
 
 

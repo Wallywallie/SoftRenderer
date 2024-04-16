@@ -14,7 +14,7 @@ Model *model = nullptr;
 int width = 800;
 const int height = 800;
 
-Vec3f light_dir(0,0,1); // define light_dir
+Vec3f light_dir(0,0, 1); // define light_dir
 
 
 
@@ -53,14 +53,16 @@ int main(int argc, char** argv) {
 	//TODO: corret parameter for camera
 	//TODO: wandering in the scene
 
-	FlatShading shader;
+	GouraudShading shader;
 	Camera camera;
+
 	
 	shader.set_transformation(camera, width, height);
+	
 	for (int i=0; i<model->nfaces(); i++) { 
 		Vec3f screen_coords[3]; 
 		for (int j=0; j<3; j++) { 
-			screen_coords[j] = shader.vertex(model, i, j);
+			screen_coords[j] = shader.vertex(i, j);
 		} 
 		shader.triangle(screen_coords, shader, image, zbuffer, tex);				
 	} 
