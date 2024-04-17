@@ -51,6 +51,7 @@ protected:
     Matrix _viewPort;
     Matrix _projection;
     Matrix _modelView;
+    Matrix transformation_inverse_transpose;
     Vec2f varying_uv[3];
     
 };

@@ -11,7 +11,7 @@ extern Model* model;
 
 Vec3f GouraudShading::vertex(int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
 		Vec3f vert = model->vert(ithFace, jthVert);
-		Vec3f screen_coor = Vec3f(  _viewPort * transformation * Matrix(vert));
+		Vec3f screen_coor = proj<3> (_viewPort * transformation * embed<4>(vert)) ;
 
 		//光照模型
 		Vec3f normal = model -> normal(ithFace, jthVert);
@@ -24,9 +24,7 @@ Vec3f GouraudShading::vertex(int ithFace, int jthVert) { //处理顶点信息 -�
 
 
 bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color) { //处理三角形内部：-uv坐标插值 -颜色：纹理、光照、法线贴图
-	
-	
-	Matrix transformation_inverse_transpose = transformation.inverse().transpose();
+
 	Vec2f coor = (varying_uv[0] * baryCoor.x + varying_uv[1] * baryCoor.y + varying_uv[2] * baryCoor.z);
 
 
@@ -40,16 +38,23 @@ bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color) { //处理三角�
 	//求与变换后的模型平面垂直的法向量
 	//变换后的法线是原法线乘以变换矩阵的逆矩阵的转置
 	Vec3f normal = model->normal(coor); //原法线
-	Vec3f trans_normal = Vec3f(transformation_inverse_transpose * Matrix(normal)).normalize(); //仿射变换后的法线
-	Vec3f light = Vec3f(transformation * Matrix(light_dir)).normalize(); //仿射变换后的灯光
+	Vec3f trans_normal = proj<3>(transformation_inverse_transpose * embed<4>(normal)).normalize(); //仿射变换后的法线
+	Vec3f light = proj<3>(transformation * embed<4>(light_dir)).normalize(); //仿射变换后的灯光
 	float intensity = trans_normal * light ;
-	intensity = std::clamp(-intensity, 0.f, 1.f);
-	std::cout << intensity << std::endl;
+	float diffuse = std::clamp(intensity, 0.f, 1.f);
+	//std::cout << intensity << std::endl;
+
+	//Blinn-Phong relectance models
+	//specular
+	//TODO:改成blinn-phong 模型
+	Vec3f r = (trans_normal*(trans_normal*light*2.f) - light).normalize();   // reflected light
+	float spec = pow(std::max(r.z, 0.0f), model->specular(coor));
+
 	
 	
 	color = model->diffuse(coor);//纹理坐标得取值为[0, 1],映射到像素空间
 	for (int i = 0; i < color.bytespp; i++) {
-		color.raw[i] *= intensity;
+		color.raw[i] = 20 + color.raw[i]*(1.2*diffuse  + .6*spec);//ambient + difuse + specular
 	}
 	return false;
 }
@@ -59,7 +64,7 @@ bool GouraudShading::fragment(Vec3f baryCoor, TGAColor &color) { //处理三角�
 Vec3f FlatShading::vertex( int ithFace, int jthVert) { //处理顶点信息 -顶点坐标转换 -顶点uv坐标 -顶点法线
 		Vec3f vert = model->vert(ithFace, jthVert);
 		world_coords[jthVert] = vert;
-		Vec3f screen_coor = Vec3f( _viewPort * transformation * Matrix(vert));
+		Vec3f screen_coor = proj<3>(_viewPort * transformation * embed<4>(vert));
 
 		varying_uv[jthVert] = model -> uv(ithFace, jthVert); 
 
@@ -85,6 +90,7 @@ void Shader::set_transformation(Camera camera, int width, int height) {
 	_projection = projection(camera.fov, camera.aspect_ratio, camera.zNear, camera.zFar);
 	_modelView = modelView(camera.eye_pos, camera.center, camera.up);
 	transformation = _projection * _modelView;
+	transformation_inverse_transpose = transformation.invert_transpose();
 }
 
 
@@ -127,7 +133,7 @@ void Shader::triangle(Vec3f *pts, Shader &shader, TGAImage &image, std::vector<f
 
 //bi-unit cube [-1,1]*[-1,1]*[-1,1] is mapped onto the screen cube [x,x+w]*[y,y+h]*[0,d].
 Matrix Shader::viewPort(int width, int height) {
-    Matrix viewPort = Matrix::identity(4);
+    Matrix viewPort = Matrix::identity();
     //trans
     viewPort[0][3] = width / (float)2; 
     viewPort[1][3] = height / (float)2;
@@ -137,7 +143,6 @@ Matrix Shader::viewPort(int width, int height) {
     viewPort[0][0] = width/(float)2;
     viewPort[1][1] = height / (float)2;
     return viewPort;
-
 }
 
 
@@ -149,9 +154,9 @@ Matrix Shader::modelView(Vec3f& eye, Vec3f& center, Vec3f& up) {
     Vec3f z_axis = (eye - center).normalize();
     Vec3f x_axis = (z_axis^up).normalize();
     Vec3f y_axis = (x_axis^z_axis).normalize();
-    Matrix trans = Matrix::identity(4);
-    Matrix rotate = Matrix::identity(4);
-    Matrix modelView = Matrix::identity(4);
+    Matrix trans = Matrix::identity();
+    Matrix rotate = Matrix::identity();
+    Matrix modelView = Matrix::identity();
     for (int i = 0; i < 3; i++) {
         rotate[i][0] = x_axis[i]; //旋转矩阵的特性：逆矩阵为矩阵的转置
         rotate[i][1] = y_axis[i];
@@ -171,9 +176,9 @@ Matrix Shader::modelView(Vec3f& eye, Vec3f& center, Vec3f& up) {
 //TODO: zfar-znear分别代表什么？
 //注意这里使用的是右手系，屏幕里是负值，越远值越小
 Matrix Shader::projection(float eye_fov, float aspect_ratio, float zNear, float zFar){
-    Matrix pers_ortho(4,4);
-    Matrix orthro = Matrix::identity(4);
-    Matrix projection = Matrix::identity(4);
+    Matrix pers_ortho;
+    Matrix orthro = Matrix::identity();
+    Matrix projection = Matrix::identity();
     float angle = eye_fov /(float)180 * PI;//角度转弧度
     float height = 2 * zNear * std::tan(angle / 2);
     float width = height * aspect_ratio;
@@ -186,8 +191,8 @@ Matrix Shader::projection(float eye_fov, float aspect_ratio, float zNear, float 
     pers_ortho[3][2] = 1;
 
 
-    Matrix orthro_trans = Matrix::identity(4);
-    Matrix orthro_scale = Matrix::identity(4);
+    Matrix orthro_trans = Matrix::identity();
+    Matrix orthro_scale = Matrix::identity();
     orthro_trans[2][3] = -(zNear + zFar) / (float)2;
 
     orthro_scale[0][0] = 2 / width;

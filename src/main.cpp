@@ -14,9 +14,7 @@ Model *model = nullptr;
 int width = 800;
 const int height = 800;
 
-Vec3f light_dir(0,0, 1); // define light_dir
-
-
+Vec3f light_dir(0.5,0.5,1); // define light_dir
 
 /**
  * 
